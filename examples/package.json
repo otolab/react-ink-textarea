@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "ink": "^7.0.1",
-    "react-ink-textarea": "workspace:*",
-    "react": "^19.2.5"
+    "react": "^19.2.5",
+    "@otolab/react-ink-textarea": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",

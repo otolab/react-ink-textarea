@@ -1,7 +1,7 @@
 {
-  "name": "react-ink-textarea",
-  "version": "0.4.0",
-  "description": "A multiline textarea component for Ink",
+  "name": "@otolab/react-ink-textarea",
+  "version": "0.4.1-otolab.0",
+  "description": "A multiline textarea component for Ink (otolab fork with IME cursor sync)",
   "type": "module",
   "sideEffects": false,
   "main": "dist/index.js",
@@ -16,11 +16,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepare": "npm run build",
+    "prepare": "pnpm run build",
     "dev": "tsc --watch --preserveWatchOutput",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "ink",
@@ -28,7 +29,9 @@
     "cli",
     "textarea",
     "input",
-    "terminal"
+    "terminal",
+    "ime",
+    "cjk"
   ],
   "author": {
     "name": "Omran Jamal",
@@ -38,12 +41,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/omranjamal/ink-textarea.git"
+    "url": "git+https://github.com/otolab/react-ink-textarea.git"
   },
   "bugs": {
-    "url": "https://github.com/omranjamal/ink-textarea/issues"
+    "url": "https://github.com/otolab/react-ink-textarea/issues"
   },
-  "homepage": "https://github.com/omranjamal/ink-textarea#readme",
+  "homepage": "https://github.com/otolab/react-ink-textarea#readme",
   "peerDependencies": {
     "ink": "^7.0.0",
     "react": "^18.0.0 || ^19.0.0"
@@ -64,10 +67,13 @@
     "string-width": "^8.2.1"
   },
   "files": [
-    "dist/",
-    "src/",
-    "tsconfig.json",
+    "dist",
     "README.md",
-    "LICENSE"
-  ]
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
 }
