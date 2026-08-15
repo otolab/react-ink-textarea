@@ -78,6 +78,15 @@ export type TextAreaHandle = {
   readonly insert: (text: string) => void;
 };
 
+/**
+ * Ink output origin for IME cursor placement (`useCursor` / `setCursorPosition`).
+ * Matches the `cursorStart` pattern from ink-text-input PR #93.
+ */
+export type CursorStart = {
+  readonly x?: number;
+  readonly y: number;
+};
+
 export type TextAreaProps = {
   readonly focus: boolean;
   readonly onSubmit: (value: string) => void;
@@ -115,6 +124,12 @@ export type TextAreaProps = {
   // auto-scrolling to keep the cursor visible. Defaults to no cap (renders
   // every row).
   readonly viewportLines?: number;
+  /**
+   * When set and `focus` is true, positions the terminal cursor for OS IME
+   * composition via Ink `useCursor`. `y` is the visual row of the textarea's
+   * first rendered line; `x` is the left edge of each row (prefix width is added).
+   */
+  readonly cursorStart?: CursorStart;
   readonly tabWidth?: number;
   readonly onDimensions?: (width: number) => void;
   readonly showInvisibles?: TShowInvisibles;

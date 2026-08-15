@@ -2,6 +2,7 @@ export { TextArea } from "./TextArea.js";
 export type {
   TextAreaProps,
   TextAreaHandle,
+  CursorStart,
   TLinePrefixProps,
   TLinePrefixFn,
   TLineSuffixProps,

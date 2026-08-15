@@ -9,6 +9,7 @@ type UseViewportOptions = {
 type UseViewportReturn = {
   visibleRowStart: number;
   visibleRowEnd: number;
+  scrollOffset: number;
 };
 
 export const useViewport = ({
@@ -39,9 +40,9 @@ export const useViewport = ({
   }, [cursorRowIndex, rowCount, cap, scrollOffset]);
 
   if (!Number.isFinite(cap)) {
-    return { visibleRowStart: 0, visibleRowEnd: rowCount };
+    return { visibleRowStart: 0, visibleRowEnd: rowCount, scrollOffset: 0 };
   }
   const start = Math.min(scrollOffset, Math.max(0, rowCount - cap));
   const end = Math.min(rowCount, start + cap);
-  return { visibleRowStart: start, visibleRowEnd: end };
+  return { visibleRowStart: start, visibleRowEnd: end, scrollOffset: start };
 };

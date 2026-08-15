@@ -26,6 +26,7 @@ Build rich CLI forms with a full-featured textarea that supports multi-line edit
   - [5. Multi-field form with focus chaining](#5-multi-field-form-with-focus-chaining)
   - [6. Slash-command picker (arrow + tab handoff)](#6-slash-command-picker-arrow--tab-handoff)
   - [7. Code-editor preset](#7-code-editor-preset)
+  - [8. IME / CJK cursor (Ink `useCursor`)](#8-ime--cjk-cursor-ink-usecursor)
 - [Props](#props)
 - [Imperative API (ref)](#imperative-api-ref)
 - [Keybindings](#keybindings)
@@ -41,6 +42,7 @@ Build rich CLI forms with a full-featured textarea that supports multi-line edit
 - 🌈 Regex (or function) labels with per-label styles; cursor reports the label under it.
 - ⌨️ Readline keybindings, configurable per chord. `Tab` is a callback. Grouped undo and bracketed paste.
 - 🌐 Unicode-correct: grapheme cursor, visual-width wrapping, real tab expansion, CRLF normalized.
+- 🇯🇵 **IME-ready** — optional `cursorStart` drives Ink 7 [`useCursor`](https://github.com/vadimdemedes/ink#usecursor) so OS IME candidate windows track the caret (CJK, macOS Japanese, etc.).
 - 📐 Built-in viewport virtualization; auto-scroll; resize-aware.
 - 🧭 Boundary callbacks (`onFirstLineUp`, `onLastLineDown`, `onFirstCharacterLeft`, `onLastCharacterRight`) for parent-owned focus chaining.
 - ⚛️ Controlled, uncontrolled, or mixed. Imperative `ref.insert(text)` for autocomplete pickers.
@@ -376,6 +378,41 @@ const CodeEditor = () => {
 };
 ```
 
+### 8. IME / CJK cursor (Ink `useCursor`)
+
+Requires **Ink 7+**. When the textarea is focused, pass `cursorStart` so the component calls `setCursorPosition` during render (see [Ink PR #866](https://github.com/vadimdemedes/ink/pull/866)). Coordinates are relative to the Ink output origin; `x` is the left edge of each row (per-line `linePrefix` width is added automatically), `y` is the visual row of the first rendered line.
+
+```tsx
+import { Box, Text } from "ink";
+import { useState } from "react";
+import { TextArea } from "react-ink-textarea";
+
+const ImeChat = () => {
+  const [value, setValue] = useState("");
+
+  return (
+    <Box flexDirection="column" padding={1}>
+      <Text>メッセージ (日本語 IME):</Text>
+      <TextArea
+        focus
+        value={value}
+        onChange={setValue}
+        onSubmit={() => {}}
+        cursorStart={{ x: 2, y: 2 }}
+        viewportLines={8}
+      />
+    </Box>
+  );
+};
+```
+
+**Integration notes**
+
+- Measure `cursorStart` from your layout (pane padding, labels above the field, etc.) — same pattern as [`ink-text-input` PR #93](https://github.com/vadimdemedes/ink-text-input/pull/93).
+- Viewport scroll and wrapped visual rows share one coordinate source; no duplicate layout math in the parent.
+- Wrap `linePrefix` content in `<Text>` (string prefixes are wrapped automatically).
+- Real IME behavior needs a TTY; verify with your target terminal + input source.
+
 ## Props
 
 | Prop                    | Type                                                                                        | Description                                                                                                                               |
@@ -397,6 +434,7 @@ const CodeEditor = () => {
 | `keybindings`           | `Partial<Record<TKeybinding, boolean>>`                                                     | Per-chord enable/disable map. Merged over defaults (all `true`). Set a chord to `false` to swallow it. `disableArrowNavigation: true` additionally forces all nav chords off. See **Keybinding Toggles** below.        |
 | `initialLineCount`      | `number`                                                                                    | Number of lines to display initially. The textarea will maintain at least this many lines. Defaults to `2`.                               |
 | `viewportLines`         | `number`                                                                                    | Maximum number of visual rows rendered at once. The textarea virtualizes rendering and auto-scrolls to keep the cursor visible. Defaults to `floor(stdout.rows * 0.5)` so blink re-renders don't scroll-jank tall buffers when the frame exceeds the terminal viewport. Pass an explicit number to override; `Infinity` renders every row. |
+| `cursorStart`           | `{ x?: number; y: number }`                                                                 | When set and `focus` is `true`, positions the terminal cursor for OS IME via Ink `useCursor`. `y` is the visual row of the textarea's first rendered line; `x` is the row's left edge before `linePrefix`. Omit to leave IME positioning to the host. Requires Ink 7+. |
 | `tabWidth`              | `number`                                                                                    | Visual width of `\t` characters in cells. Tabs render as `tabWidth` spaces (or `→` + spaces with `showInvisibles.tab`). The stored value keeps `\t`. Defaults to `4`. |
 | `value`                 | `string`                                                                                    | **Controlled mode**: The current value of the textarea. When provided, component operates in controlled mode.                             |
 | `cursorPosition`        | `[line: number, column: number]`                                                            | **Controlled mode**: The current cursor position as a `[line, column]` tuple. Use with `value` for full control.                          |
