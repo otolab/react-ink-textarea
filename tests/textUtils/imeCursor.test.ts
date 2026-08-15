@@ -41,7 +41,7 @@ describe("computeImeScreenPosition", () => {
     const pos = computeImeScreenPosition({
       cursorRowIndex: 0,
       chunkText: "あいう",
-      cursorOffsetInChunk: 2,
+      cursorOffsetInChunk: 1,
       visibleRowStart: 0,
       prefixWidth: 0,
       cursorStart: { x: 0, y: 0 },

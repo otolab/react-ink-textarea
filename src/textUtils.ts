@@ -358,7 +358,8 @@ export const findSegmentIndex = (
 };
 
 import ansiStyles from "ansi-styles";
-import type { TStyleProps } from "./types.js";
+
+export type StyleAnsi = {
   readonly open: string;
   readonly close: string;
   readonly unsupported: boolean;

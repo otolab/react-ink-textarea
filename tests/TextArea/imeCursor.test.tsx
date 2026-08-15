@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render } from "ink-testing-library";
 import { Text } from "ink";
+import { useState, type ReactNode } from "react";
 import { TextArea } from "../../src/index.js";
-import { tick } from "../_util/wait.js";
+import { tick, settle } from "../_util/wait.js";
 
 const setCursorPosition = vi.fn();
 
@@ -13,6 +14,22 @@ vi.mock("ink", async (importOriginal) => {
     useCursor: () => ({ setCursorPosition }),
   };
 });
+
+const ScrollingHost = ({ value }: { value: string }): ReactNode => {
+  const [cursor, setCursor] = useState<[number, number]>([0, 0]);
+  return (
+    <TextArea
+      focus={true}
+      onSubmit={() => {}}
+      value={value}
+      cursorPosition={cursor}
+      onChange={() => {}}
+      onCursorChange={(p) => setCursor(p)}
+      viewportLines={5}
+      cursorStart={{ x: 0, y: 1 }}
+    />
+  );
+};
 
 describe("TextArea IME cursor", () => {
   beforeEach(() => {
@@ -70,22 +87,12 @@ describe("TextArea IME cursor", () => {
 
   it("adjusts Y for viewport scroll", async () => {
     const value = Array.from({ length: 20 }, (_, i) => `row${i}`).join("\n");
-    const { stdin } = render(
-      <TextArea
-        focus={true}
-        onSubmit={() => {}}
-        value={value}
-        cursorPosition={[0, 0]}
-        onChange={() => {}}
-        viewportLines={5}
-        cursorStart={{ x: 0, y: 1 }}
-      />,
-    );
+    const { stdin, lastFrame } = render(<ScrollingHost value={value} />);
     await tick();
 
     for (let i = 0; i < 7; i++) {
       stdin.write("\x1b[B");
-      await tick();
+      await settle(lastFrame);
     }
 
     const last = setCursorPosition.mock.calls.at(-1)?.[0];
