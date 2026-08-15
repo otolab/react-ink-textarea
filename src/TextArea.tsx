@@ -1,4 +1,4 @@
-import { Box, Text, useBoxMetrics, useStdout, measureElement } from "ink";
+import { Box, Text, useBoxMetrics, useStdout, measureElement, useCursor } from "ink";
 import type { DOMElement } from "ink";
 import {
   useRef,
@@ -27,6 +27,7 @@ import {
   findSegmentIndex,
   buildVisualRows,
   visualRowForCursor,
+  computeImeScreenPosition,
 } from "./textUtils.js";
 import { useCursorState } from "./hooks/useCursorState.js";
 import { useUndo } from "./hooks/useUndo.js";
@@ -245,6 +246,7 @@ export const TextArea = ({
   onTab,
   initialLineCount = DEFAULT_INITIAL_LINE_COUNT,
   viewportLines,
+  cursorStart,
   tabWidth = DEFAULT_TAB_WIDTH,
   onDimensions,
   showInvisibles = false,
@@ -369,6 +371,21 @@ export const TextArea = ({
   const chunkRefs = useRef<Map<string, { current: DOMElement | null }>>(
     new Map(),
   );
+  const prefixRefs = useRef<Map<string, { current: DOMElement | null }>>(
+    new Map(),
+  );
+  const getPrefixRef = (
+    lineIdx: number,
+    chunkIdx: number,
+  ): { current: DOMElement | null } => {
+    const key = chunkKey(lineIdx, chunkIdx);
+    let r = prefixRefs.current.get(key);
+    if (!r) {
+      r = { current: null };
+      prefixRefs.current.set(key, r);
+    }
+    return r;
+  };
   const getChunkRef = (
     lineIdx: number,
     chunkIdx: number,
@@ -382,6 +399,7 @@ export const TextArea = ({
     return r;
   };
   const [chunkWidths, setChunkWidths] = useState<Record<string, number>>({});
+  const [prefixWidths, setPrefixWidths] = useState<Record<string, number>>({});
   const [baseLineWidth, setBaseLineWidth] = useState(0);
   // Guards the measurement effect against non-convergent feedback: when a
   // decoration's *width* depends on a wrapping-derived flag (e.g. a wider
@@ -470,6 +488,29 @@ export const TextArea = ({
 
     if (baseChanged) setBaseLineWidth(base);
     if (widthsChanged) setChunkWidths(next);
+  });
+
+  useEffect(() => {
+    if (!linePrefix) {
+      setPrefixWidths((prev) => (Object.keys(prev).length ? {} : prev));
+      return;
+    }
+
+    const next: Record<string, number> = {};
+    for (const [key, ref] of prefixRefs.current) {
+      const node = ref.current;
+      if (!node) continue;
+      const { width } = measureElement(node);
+      if (width > 0) next[key] = width;
+    }
+
+    const nextKeys = Object.keys(next);
+    const prevKeys = Object.keys(prefixWidths);
+    const widthsChanged =
+      prevKeys.length !== nextKeys.length ||
+      !nextKeys.every((k) => prefixWidths[k] === next[k]);
+
+    if (widthsChanged) setPrefixWidths(next);
   });
 
   const { pushUndo, undo, redo, resetMutationTracking } = useUndo({
@@ -664,6 +705,8 @@ export const TextArea = ({
       typeof linePrefix === "function"
         ? linePrefix(decorationProps)
         : linePrefix;
+    const prefixNode =
+      typeof prefix === "string" ? <Text>{prefix}</Text> : prefix;
     const suffix =
       typeof lineSuffix === "function"
         ? lineSuffix(decorationProps)
@@ -704,7 +747,18 @@ export const TextArea = ({
         flexDirection="row"
         backgroundColor={isHighlighted ? activeLineColor : undefined}
       >
-        {hasPrefix ? <Box flexShrink={0}>{prefix}</Box> : null}
+        {hasPrefix ? (
+          <Box
+            flexShrink={0}
+            ref={
+              linePrefix
+                ? getPrefixRef(lineNumber, continuationIndex)
+                : undefined
+            }
+          >
+            {prefixNode}
+          </Box>
+        ) : null}
         <Box ref={contentBoxRef} flexGrow={1}>
           {content}
         </Box>
@@ -738,11 +792,71 @@ export const TextArea = ({
       ? Math.max(1, Math.floor(terminalRows * 0.5))
       : Number.POSITIVE_INFINITY);
 
-  const { visibleRowStart, visibleRowEnd } = useViewport({
+  const { visibleRowStart, visibleRowEnd, scrollOffset } = useViewport({
     rowCount: Math.max(visualRows.length, initialLineCount),
     viewportLines: resolvedViewportLines,
     cursorRowIndex,
   });
+
+  const { setCursorPosition } = useCursor();
+
+  const cursorLineStartAbs = cursor - cursorColumn;
+  let cursorChunkIdx = 0;
+  let cursorPosInChunk = cursorColumn;
+  let cursorChunkText = "";
+  if (isActive && cursorRowIndex >= 0) {
+    const cursorRow = visualRows[cursorRowIndex];
+    if (cursorRow && !cursorRow.isVirtualLine) {
+      cursorChunkText = cursorRow.text;
+      for (const r of visualRows) {
+        if (r.isVirtualLine || r.lineIdx !== cursorLine) continue;
+        const chunkStartCol = r.absStart - cursorLineStartAbs;
+        if (chunkStartCol <= cursorColumn) {
+          cursorChunkIdx = r.chunkIdx;
+          cursorPosInChunk = cursorColumn - chunkStartCol;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  const cursorPrefixKey =
+    isActive && cursorRowIndex >= 0
+      ? chunkKey(
+          visualRows[cursorRowIndex]!.lineIdx,
+          visualRows[cursorRowIndex]!.chunkIdx,
+        )
+      : "";
+  const cursorPrefixWidth = linePrefix ? (prefixWidths[cursorPrefixKey] ?? 0) : 0;
+
+  if (isActive && cursorStart !== undefined) {
+    let imePosition:
+      | ReturnType<typeof computeImeScreenPosition>
+      | undefined;
+    if (value.length === 0) {
+      const visibleRowIndex = cursorLine - scrollOffset;
+      if (visibleRowIndex >= 0 && visibleRowIndex < visibleRowEnd - visibleRowStart) {
+        imePosition = {
+          x: (cursorStart.x ?? 0) + cursorPrefixWidth,
+          y: cursorStart.y + visibleRowIndex,
+        };
+      }
+    } else {
+      imePosition = computeImeScreenPosition({
+        cursorRowIndex,
+        chunkText: cursorChunkText,
+        cursorOffsetInChunk: cursorPosInChunk,
+        visibleRowStart: scrollOffset,
+        prefixWidth: cursorPrefixWidth,
+        cursorStart,
+        tabWidth,
+      });
+    }
+    setCursorPosition(imePosition);
+  } else {
+    setCursorPosition(undefined);
+  }
 
   if (value.length === 0 && !isActive && placeholderLines.length > 0) {
     const visibleCount = Math.max(0, visibleRowEnd - visibleRowStart);
@@ -827,24 +941,6 @@ export const TextArea = ({
   }
 
   const renderedLines: ReactNode[] = [];
-
-  // Locate the cursor's sub-row by chunk boundaries rather than by a uniform
-  // width, since sub-rows of the same line can now have different widths.
-  const cursorLineStartAbs = cursor - cursorColumn;
-  let cursorChunkIdx = 0;
-  let cursorPosInChunk = cursorColumn;
-  if (isActive) {
-    for (const r of visualRows) {
-      if (r.isVirtualLine || r.lineIdx !== cursorLine) continue;
-      const chunkStartCol = r.absStart - cursorLineStartAbs;
-      if (chunkStartCol <= cursorColumn) {
-        cursorChunkIdx = r.chunkIdx;
-        cursorPosInChunk = cursorColumn - chunkStartCol;
-      } else {
-        break;
-      }
-    }
-  }
 
   for (let i = visibleRowStart; i < visibleRowEnd; i++) {
     const row = visualRows[i]!;

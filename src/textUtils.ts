@@ -1,5 +1,5 @@
 import stringWidth from "string-width";
-import type { TLabelRule } from "./types.js";
+import type { TLabelRule, TStyleProps, CursorStart } from "./types.js";
 
 const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
 
@@ -12,6 +12,52 @@ export const graphemeWidth = (g: string, tabWidth = 1): number => {
     if (c < 0x20) return 0;
   }
   return stringWidth(g);
+};
+
+export const textVisualWidth = (text: string, tabWidth = 1): number => {
+  if (text.length === 0) return 0;
+  let width = 0;
+  for (const seg of segmenter.segment(text)) {
+    width += graphemeWidth(seg.segment, tabWidth);
+  }
+  return width;
+};
+
+/**
+ * Map internal visual-row cursor state to Ink `setCursorPosition` coordinates.
+ * `visibleRowStart` must match `useViewport` scroll offset (same source as Y).
+ */
+export const computeImeScreenPosition = (args: {
+  readonly cursorRowIndex: number;
+  readonly chunkText: string;
+  readonly cursorOffsetInChunk: number;
+  readonly visibleRowStart: number;
+  readonly prefixWidth?: number;
+  readonly cursorStart: CursorStart;
+  readonly tabWidth?: number;
+}): { readonly x: number; readonly y: number } | undefined => {
+  const {
+    cursorRowIndex,
+    chunkText,
+    cursorOffsetInChunk,
+    visibleRowStart,
+    prefixWidth = 0,
+    cursorStart,
+    tabWidth = 1,
+  } = args;
+
+  if (cursorRowIndex < 0) return undefined;
+
+  const visibleRowIndex = cursorRowIndex - visibleRowStart;
+  if (visibleRowIndex < 0) return undefined;
+
+  const before = chunkText.slice(0, Math.max(0, cursorOffsetInChunk));
+  const columnWidth = textVisualWidth(before, tabWidth);
+
+  return {
+    x: (cursorStart.x ?? 0) + prefixWidth + columnWidth,
+    y: cursorStart.y + visibleRowIndex,
+  };
 };
 
 const COMBINING_RANGES: ReadonlyArray<readonly [number, number]> = [
@@ -312,7 +358,6 @@ export const findSegmentIndex = (
 };
 
 import ansiStyles from "ansi-styles";
-import type { TStyleProps } from "./types.js";
 
 export type StyleAnsi = {
   readonly open: string;
