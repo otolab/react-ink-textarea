@@ -13,7 +13,7 @@ import {
   type TLabels,
   type TextAreaProps,
   type TextAreaHandle,
-} from "react-ink-textarea";
+} from "@otolab/react-ink-textarea";
 
 const SLASH_COMMANDS = [
   "/train",

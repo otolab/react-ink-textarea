@@ -1,7 +1,18 @@
-# react-ink-textarea
+# @otolab/react-ink-textarea
+
 > A multiline textarea component for [Ink](https://github.com/vadimdemedes/ink)
 
-[<img alt="GitHub Open Issues and Pull Requests" src="https://img.shields.io/github/issues-search/omranjamal/react-ink-textarea?query=is%3Aopen&label=open%20issues%20%26%20PRs">](https://github.com/omranjamal/react-ink-textarea/issues) [<img alt="NPM Downloads" src="https://img.shields.io/npm/dw/react-ink-textarea">](https://www.npmjs.com/package/react-ink-textarea) [<img alt="NPM Version" src="https://img.shields.io/npm/v/react-ink-textarea">](https://www.npmjs.com/package/react-ink-textarea) [<img alt="NPM License" src="https://img.shields.io/npm/l/react-ink-textarea">](https://github.com/omranjamal/react-ink-textarea/blob/main/LICENSE) [<img alt="GitHub forks" src="https://img.shields.io/github/forks/omranjamal/react-ink-textarea?style=flat">](https://github.com/omranjamal/react-ink-textarea/network/members)
+## Fork notice
+
+This package is maintained by [otolab](https://github.com/otolab) as a fork of [omranjamal/react-ink-textarea](https://github.com/omranjamal/react-ink-textarea) (npm `react-ink-textarea@0.4.0`).
+
+**Version `0.4.1-otolab.0`** is based on upstream `0.4.0` with the addition of:
+
+- **`cursorStart` prop** — Ink 7 [`useCursor`](https://github.com/vadimdemedes/ink#usecursor) integration for OS IME physical cursor sync (CJK, macOS Japanese, etc.)
+
+We intend to contribute these changes upstream. Track progress in [agents-ensemble#195](https://github.com/otolab/agents-ensemble/issues/195).
+
+[<img alt="GitHub Issues" src="https://img.shields.io/github/issues/otolab/react-ink-textarea">](https://github.com/otolab/react-ink-textarea/issues) [<img alt="NPM License" src="https://img.shields.io/npm/l/@otolab/react-ink-textarea">](https://github.com/otolab/react-ink-textarea/blob/main/LICENSE)
 
 Build rich CLI forms with a full-featured textarea that supports multi-line editing, cursor navigation, undo, and customizable line prefixes.
 
@@ -51,13 +62,13 @@ Build rich CLI forms with a full-featured textarea that supports multi-line edit
 
 ## Install
 
-Install [react-ink-textarea](https://www.npmjs.com/package/react-ink-textarea) via your JS package manager of choice.
+Install [@otolab/react-ink-textarea](https://www.npmjs.com/package/@otolab/react-ink-textarea) via your JS package manager of choice.
 
 ```bash
-npm install react-ink-textarea
+npm install @otolab/react-ink-textarea
 
 # or
-pnpm add react-ink-textarea
+pnpm add @otolab/react-ink-textarea
 ```
 
 ## Usage
@@ -69,7 +80,7 @@ Uncontrolled mode. Submit on Enter, freeze on submit.
 ```tsx
 import { render } from "ink";
 import { useState } from "react";
-import { TextArea } from "react-ink-textarea";
+import { TextArea } from "@otolab/react-ink-textarea";
 
 const App = () => {
   const [submitted, setSubmitted] = useState("");
@@ -97,7 +108,7 @@ Own `value` and `cursorPosition` externally. `onCursorChange` reports the label 
 ```tsx
 import { Box, Text } from "ink";
 import { useState } from "react";
-import { TextArea, type TLabels } from "react-ink-textarea";
+import { TextArea, type TLabels } from "@otolab/react-ink-textarea";
 
 const labels: TLabels = [{ pattern: /#\w+/g, label: "tag" }];
 const styles = { tag: { color: "magenta" } };
@@ -134,7 +145,7 @@ const Editor = () => {
 Drop-in: pass the bundled `LineNumberPrefix` straight to `linePrefix`.
 
 ```tsx
-import { TextArea, LineNumberPrefix } from "react-ink-textarea";
+import { TextArea, LineNumberPrefix } from "@otolab/react-ink-textarea";
 
 <TextArea
   focus
@@ -150,7 +161,7 @@ Custom: `linePrefix` is a render prop. Handle `isContinuationLine` and `isVirtua
 
 ```tsx
 import { Text } from "ink";
-import { TextArea, LineNumber } from "react-ink-textarea";
+import { TextArea, LineNumber } from "@otolab/react-ink-textarea";
 
 <TextArea
   focus
@@ -193,7 +204,7 @@ render the suffix once per logical line rather than on every wrapped row.
 
 ```tsx
 import { Text } from "ink";
-import { TextArea } from "react-ink-textarea";
+import { TextArea } from "@otolab/react-ink-textarea";
 
 const value = "hello\nworld";
 
@@ -222,7 +233,7 @@ fallback until they scroll into view (same measurement caveat as `linePrefix`).
 
 ```tsx
 import { useMemo } from "react";
-import { TextArea, type TLabels } from "react-ink-textarea";
+import { TextArea, type TLabels } from "@otolab/react-ink-textarea";
 
 const KNOWN_USERS = new Set(["alice", "bob", "carol"]);
 
@@ -265,7 +276,7 @@ Boundary callbacks let you escape the textarea cleanly: ↑ on the first row jum
 ```tsx
 import { Box, useFocusManager, useFocus } from "ink";
 import { useState } from "react";
-import { TextArea } from "react-ink-textarea";
+import { TextArea } from "@otolab/react-ink-textarea";
 import TextInput from "ink-text-input";
 
 const Form = () => {
@@ -303,7 +314,7 @@ When a menu opens, suspend cursor navigation with `disableArrowNavigation` and d
 ```tsx
 import { Box, Text } from "ink";
 import { useState } from "react";
-import { TextArea } from "react-ink-textarea";
+import { TextArea } from "@otolab/react-ink-textarea";
 
 const COMMANDS = ["/help", "/quit", "/train"];
 
@@ -350,7 +361,7 @@ Override the viewport explicitly, expand tabs, lock down ergonomic chords, and s
 ```tsx
 import { Box, Text } from "ink";
 import { useState } from "react";
-import { TextArea } from "react-ink-textarea";
+import { TextArea } from "@otolab/react-ink-textarea";
 
 const CodeEditor = () => {
   const [width, setWidth] = useState(0);
@@ -385,7 +396,7 @@ Requires **Ink 7+**. When the textarea is focused, pass `cursorStart` so the com
 ```tsx
 import { Box, Text } from "ink";
 import { useState } from "react";
-import { TextArea } from "react-ink-textarea";
+import { TextArea } from "@otolab/react-ink-textarea";
 
 const ImeChat = () => {
   const [value, setValue] = useState("");
@@ -456,7 +467,7 @@ Pass a `ref` of type `TextAreaHandle` to insert text programmatically — typica
 
 ```tsx
 import { useRef } from "react";
-import { TextArea, type TextAreaHandle } from "react-ink-textarea";
+import { TextArea, type TextAreaHandle } from "@otolab/react-ink-textarea";
 
 const Composer = () => {
   const ref = useRef<TextAreaHandle>(null);

@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1-otolab.0] - 2026-08-15
+
+### Added
+
+- npm publish as `@otolab/react-ink-textarea` (fork of upstream `react-ink-textarea@0.4.0`)
+- `cursorStart` prop — Ink 7 `useCursor` integration for OS IME physical cursor sync
+- `prepare` / `prepublishOnly` scripts to build `dist/` on install and publish
+- GitHub Actions CI (`pnpm build` + vitest) and publish workflow (Trusted Publisher / `NPM_TOKEN`)
+
+### Changed
+
+- Package scope and repository URLs point to [otolab/react-ink-textarea](https://github.com/otolab/react-ink-textarea)
+
 ## [0.4.0] - 2026-08-07
 
 ### Added
