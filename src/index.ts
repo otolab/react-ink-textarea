@@ -18,10 +18,7 @@ export type {
   TKeybindingSetting,
   TKeybindings,
 } from "./types.js";
-export {
-  DEFAULT_KEY_ACTIONS,
-  UPSTREAM_KEY_ACTIONS,
-} from "./constants.js";
+export { DEFAULT_KEY_ACTIONS } from "./constants.js";
 export { resolveKeyAction, resolveKeyActions } from "./keybindings.js";
 export { LineNumber } from "./LineNumber.js";
 export type { LineNumberProps } from "./LineNumber.js";

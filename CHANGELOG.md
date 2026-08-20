@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **`Ctrl+Y` is yank (paste from kill ring), not redo.**
-- **`keybindings` supports chord → action overrides** (upstream PR 候補). Values: `true` / `false` / `TKeyAction` — e.g. `keybindings={{ "Ctrl+Y": "redo" }}`. Exports: `DEFAULT_KEY_ACTIONS`, `UPSTREAM_KEY_ACTIONS`, `resolveKeyActions`. Upstream `react-ink-textarea` binds `Ctrl+Y` to redo; this otolab fork follows Readline/Emacs semantics instead. Redo is no longer exposed on the keyboard (undo stack still works via `Ctrl+Z`).
+- **`keybindings` supports chord → action overrides** (upstream PR 候補). Values: `true` / `false` / `TKeyAction` — e.g. `keybindings={{ "Ctrl+Y": "redo" }}`. Exports: `DEFAULT_KEY_ACTIONS`, `resolveKeyActions`.
 
 ### Tests
 

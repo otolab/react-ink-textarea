@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_KEY_ACTIONS,
-  UPSTREAM_KEY_ACTIONS,
-} from "../../src/constants.js";
+import { DEFAULT_KEY_ACTIONS } from "../../src/constants.js";
 import { resolveKeyAction, resolveKeyActions } from "../../src/keybindings.js";
 
 describe("resolveKeyAction", () => {
@@ -28,15 +25,10 @@ describe("resolveKeyActions", () => {
     expect(actions["Ctrl+F"]).toBe("cursorForwardChar");
   });
 
-  it("supports upstream-style Ctrl+Y redo override", () => {
-    const fromUpstreamDefaults = resolveKeyActions(
-      undefined,
-      UPSTREAM_KEY_ACTIONS,
-    );
-    expect(fromUpstreamDefaults["Ctrl+Y"]).toBe("redo");
-
-    const perChord = resolveKeyActions({ "Ctrl+Y": "redo" });
-    expect(perChord["Ctrl+Y"]).toBe("redo");
+  it("supports per-chord action override", () => {
+    const actions = resolveKeyActions({ "Ctrl+Y": "redo" });
+    expect(actions["Ctrl+Y"]).toBe("redo");
+    expect(actions["Ctrl+Z"]).toBe("undo");
   });
 
   it("force-disables navigation chords when requested", () => {

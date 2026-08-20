@@ -36,18 +36,6 @@ export const DEFAULT_KEY_ACTIONS: Readonly<Record<TKeybinding, TKeyAction>> = {
   "Alt+Y": "yankPop",
 };
 
-/**
- * Upstream `react-ink-textarea@0.4.x` defaults that differ from this fork.
- * Pass as the `defaultKeyActions` argument to `resolveKeyActions`, or override
- * individual chords (e.g. `keybindings={{ "Ctrl+Y": "redo" }}`).
- */
-export const UPSTREAM_KEY_ACTIONS: Readonly<
-  Record<TKeybinding, TKeyAction>
-> = {
-  ...DEFAULT_KEY_ACTIONS,
-  "Ctrl+Y": "redo",
-};
-
 /** @deprecated Boolean toggles only; prefer `DEFAULT_KEY_ACTIONS` + `TKeybindings`. */
 export const DEFAULT_KEYBINDINGS: Readonly<Record<TKeybinding, boolean>> = {
   Enter: true,

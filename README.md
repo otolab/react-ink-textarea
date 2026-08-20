@@ -527,7 +527,7 @@ Pass a `keybindings` map to disable individual chords or **replace the bound act
 />
 ```
 
-Fork defaults live in `DEFAULT_KEY_ACTIONS` (`Ctrl+Y` → `"yank"`). Upstream-compatible defaults (`Ctrl+Y` → `"redo"`) are exported as `UPSTREAM_KEY_ACTIONS` for helpers/tests — or override per chord as above.
+Fork defaults live in `DEFAULT_KEY_ACTIONS` (`Ctrl+Y` → `"yank"`). To match upstream redo behavior, override per chord: `keybindings={{ "Ctrl+Y": "redo" }}`.
 
 The full chord catalog (every key is a `TKeybinding`):
 
