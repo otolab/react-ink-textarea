@@ -37,10 +37,12 @@ type UseKeyboardInputOptions = {
     value: string,
     cursor: number,
   ) => { value: string; cursor: number } | undefined;
-  redo: (
-    value: string,
-    cursor: number,
-  ) => { value: string; cursor: number } | undefined;
+  pushKill: (text: string, append?: boolean) => void;
+  yank: () => string;
+  yankPop: () => string;
+  getLastYankLength: () => number;
+  setLastYankLength: (length: number) => void;
+  resetYankState: () => void;
   resetMutationTracking: () => void;
   resetBlink: () => void;
   lineWidth: number;
@@ -63,7 +65,12 @@ export const useKeyboardInput = ({
   setCursor,
   pushUndo,
   undo,
-  redo,
+  pushKill,
+  yank,
+  yankPop,
+  getLastYankLength,
+  setLastYankLength,
+  resetYankState,
   resetMutationTracking,
   resetBlink,
   lineWidth,
@@ -253,11 +260,35 @@ export const useKeyboardInput = ({
         return;
       }
 
+      if (key.ctrl && input === "f") {
+        if (!keybindings["Ctrl+F"]) return;
+        if (cursor === value.length) {
+          if (onLastCharacterRight) onLastCharacterRight();
+          return;
+        }
+        resetBlink();
+        setCursor((c) => nextGraphemeOffset(value, c));
+        return;
+      }
+
+      if (key.ctrl && input === "b") {
+        if (!keybindings["Ctrl+B"]) return;
+        if (cursor === 0) {
+          if (onFirstCharacterLeft) onFirstCharacterLeft();
+          return;
+        }
+        resetBlink();
+        setCursor((c) => prevGraphemeOffset(value, c));
+        return;
+      }
+
       if (key.ctrl && input === "w") {
         if (!keybindings["Ctrl+W"]) return;
         resetBlink();
-        pushUndo("delete", value, cursor);
         const boundary = findPrevWordBoundary(value, cursor);
+        const killed = value.slice(boundary, cursor);
+        if (killed) pushKill(killed);
+        pushUndo("delete", value, cursor);
         const newValue = value.slice(0, boundary) + value.slice(cursor);
         setValue(newValue);
         setCursor(boundary, newValue);
@@ -274,6 +305,8 @@ export const useKeyboardInput = ({
         const lineStart = findLineStart(value, cursor);
         if (lineStart === cursor) {
           if (cursor === 0) return;
+          const killed = value[cursor - 1] ?? "";
+          if (killed) pushKill(killed);
           pushUndo("delete", value, cursor);
           const target = cursor - 1;
           const newValue = value.slice(0, target) + value.slice(cursor);
@@ -282,6 +315,8 @@ export const useKeyboardInput = ({
           resetMutationTracking();
           return;
         }
+        const killed = value.slice(lineStart, cursor);
+        if (killed) pushKill(killed);
         pushUndo("delete", value, cursor);
         const newValue = value.slice(0, lineStart) + value.slice(cursor);
         setValue(newValue);
@@ -298,9 +333,11 @@ export const useKeyboardInput = ({
       if (key.ctrl && input === "k") {
         if (!keybindings["Ctrl+K"]) return;
         resetBlink();
-        pushUndo("delete", value, cursor);
         const lineEnd = findLineEnd(value, cursor);
         const killEnd = value[lineEnd] === "\n" ? lineEnd + 1 : lineEnd;
+        const killed = value.slice(cursor, killEnd);
+        if (killed) pushKill(killed, true);
+        pushUndo("delete", value, cursor);
         const newValue = value.slice(0, cursor) + value.slice(killEnd);
         setValue(newValue);
         setCursor(cursor, newValue);
@@ -319,8 +356,10 @@ export const useKeyboardInput = ({
         if (key.meta) {
           if (!keybindings["Alt+Backspace"]) return;
           resetBlink();
-          pushUndo("delete", value, cursor);
           const boundary = findPrevWordBoundary(value, cursor);
+          const killed = value.slice(boundary, cursor);
+          if (killed) pushKill(killed);
+          pushUndo("delete", value, cursor);
           const newValue = value.slice(0, boundary) + value.slice(cursor);
           setValue(newValue);
           setCursor(boundary, newValue);
@@ -354,12 +393,31 @@ export const useKeyboardInput = ({
 
       if (key.ctrl && input === "y") {
         if (!keybindings["Ctrl+Y"]) return;
+        const text = yank();
+        if (!text) return;
         resetBlink();
-        const entry = redo(value, cursor);
-        if (entry) {
-          setValue(entry.value);
-          setCursor(entry.cursor);
-        }
+        pushUndo("insert", value, cursor);
+        const newValue = value.slice(0, cursor) + text + value.slice(cursor);
+        setValue(newValue);
+        setCursor(cursor + text.length, newValue);
+        setLastYankLength(text.length);
+        resetMutationTracking();
+        return;
+      }
+
+      if (key.meta && input === "y") {
+        if (!keybindings["Alt+Y"]) return;
+        const lastYankLength = getLastYankLength();
+        const text = yankPop();
+        if (!text) return;
+        resetBlink();
+        const deleteStart = Math.max(0, cursor - lastYankLength);
+        pushUndo("insert", value, deleteStart);
+        const newValue =
+          value.slice(0, deleteStart) + text + value.slice(cursor);
+        setValue(newValue);
+        setCursor(deleteStart + text.length, newValue);
+        setLastYankLength(text.length);
         resetMutationTracking();
         return;
       }

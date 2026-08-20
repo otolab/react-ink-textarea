@@ -33,6 +33,7 @@ import { useCursorState } from "./hooks/useCursorState.js";
 import { useUndo } from "./hooks/useUndo.js";
 import { useCursorBlink } from "./hooks/useCursorBlink.js";
 import { useKeyboardInput } from "./hooks/useKeyboardInput.js";
+import { useKillRing } from "./hooks/useKillRing.js";
 import { useViewport } from "./hooks/useViewport.js";
 import type {
   TextAreaProps,
@@ -513,10 +514,19 @@ export const TextArea = ({
     if (widthsChanged) setPrefixWidths(next);
   });
 
-  const { pushUndo, undo, redo, resetMutationTracking } = useUndo({
+  const { pushUndo, undo, resetMutationTracking } = useUndo({
     maxUndo,
     undoGroupDelay,
   });
+
+  const {
+    pushKill,
+    yank,
+    yankPop,
+    getLastYankLength,
+    setLastYankLength,
+    resetYankState,
+  } = useKillRing();
 
   const { cursorVisible, resetBlink } = useCursorBlink({
     isActive,
@@ -571,7 +581,12 @@ export const TextArea = ({
     setCursor,
     pushUndo,
     undo,
-    redo,
+    pushKill,
+    yank,
+    yankPop,
+    getLastYankLength,
+    setLastYankLength,
+    resetYankState,
     resetMutationTracking,
     resetBlink,
     lineWidth: getChunkWidth(cursorLine, 0),

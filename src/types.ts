@@ -63,6 +63,8 @@ export type TKeybinding =
   | "Alt+F"
   | "Ctrl+A"
   | "Ctrl+E"
+  | "Ctrl+F"
+  | "Ctrl+B"
   | "Ctrl+W"
   | "Ctrl+U"
   | "Ctrl+K"
@@ -70,7 +72,8 @@ export type TKeybinding =
   | "Delete"
   | "Alt+Backspace"
   | "Ctrl+Z"
-  | "Ctrl+Y";
+  | "Ctrl+Y"
+  | "Alt+Y";
 
 export type TKeybindings = Partial<Readonly<Record<TKeybinding, boolean>>>;
 

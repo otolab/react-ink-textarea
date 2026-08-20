@@ -490,15 +490,18 @@ const Composer = () => {
 | `Opt+→`         | Jump to next word              |
 | `Ctrl+A`        | Start of current line          |
 | `Ctrl+E`        | End of current line            |
-| `Ctrl+W`        | Delete word before cursor      |
+| `Ctrl+F`        | Forward one character          |
+| `Ctrl+B`        | Backward one character         |
+| `Ctrl+W`        | Delete word before cursor (pushes to kill ring) |
 | `Ctrl+U`        | Delete to start of line. At column 0, joins with previous line (matches Cmd+Backspace mapping in iTerm2/ghostty). |
-| `Ctrl+K`        | Delete to end of line          |
+| `Ctrl+K`        | Delete to end of line (pushes to kill ring) |
 | `Backspace`     | Delete character before cursor |
 | `Delete`        | Delete character before cursor (same as `Backspace`) |
 | `Opt+Backspace` | Delete word before cursor      |
 | `Cmd+Backspace` | Delete to start of line (same as `Ctrl+U`; gated by the `Ctrl+U` toggle) |
 | `Ctrl+Z`        | Undo (up to 128 steps)         |
-| `Ctrl+Y`        | Redo                           |
+| `Ctrl+Y`        | Yank (paste from kill ring)    |
+| `Alt+Y`         | Yank-pop (rotate kill ring)    |
 
 > On macOS, `Alt` chords are pressed via the **Option** (`⌥`) key.
 
@@ -535,6 +538,8 @@ The full chord catalog (every key is a `TKeybinding`):
 | `Alt+F`          | Next word                         |
 | `Ctrl+A`         | Start of line                     |
 | `Ctrl+E`         | End of line                       |
+| `Ctrl+F`         | Forward one character             |
+| `Ctrl+B`         | Backward one character            |
 | `Ctrl+W`         | Delete word before cursor         |
 | `Ctrl+U`         | Delete to start of line           |
 | `Ctrl+K`         | Delete to end of line             |
@@ -542,9 +547,10 @@ The full chord catalog (every key is a `TKeybinding`):
 | `Delete`         | Delete grapheme before cursor     |
 | `Alt+Backspace`  | Delete word before cursor         |
 | `Ctrl+Z`         | Undo                              |
-| `Ctrl+Y`         | Redo                              |
+| `Ctrl+Y`         | Yank (kill ring)                  |
+| `Alt+Y`          | Yank-pop                          |
 
-`disableArrowNavigation: true` additionally forces all nav chords (`Up`, `Down`, `Left`, `Right`, `Alt+B`, `Alt+F`, `Ctrl+A`, `Ctrl+E`) off regardless of the map.
+`disableArrowNavigation: true` additionally forces all nav chords (`Up`, `Down`, `Left`, `Right`, `Alt+B`, `Alt+F`, `Ctrl+A`, `Ctrl+E`, `Ctrl+F`, `Ctrl+B`) off regardless of the map.
 
 ## Caveats & limitations
 
@@ -592,7 +598,7 @@ Things to know before shipping. Most are intrinsic to running a rich editor insi
 
 - **Time-grouped, not semantic.** Edits within `undoGroupDelay` (default 2.5 s) collapse into one step. On a slow machine the boundary may land mid-word.
 - **Bounded by `maxUndo`** (default 128). Older history is dropped silently.
-- **Redo is `Ctrl+Y`.** `Ctrl+Shift+Z` is not bound — terminals can't distinguish it from `Ctrl+Z` (control chars carry no shift bit). Any fresh edit after an undo clears the redo history.
+- **In this otolab fork, `Ctrl+Y` is yank (kill ring), not redo.** Upstream binds `Ctrl+Y` to redo; disable with `"Ctrl+Y": false` if you need to swallow the chord. There is no keyboard redo binding — `Ctrl+Shift+Z` is not bindable in terminals anyway.
 
 </details>
 

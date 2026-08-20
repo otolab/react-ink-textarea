@@ -22,6 +22,8 @@ export const DEFAULT_KEYBINDINGS: Readonly<Record<TKeybinding, boolean>> = {
   "Alt+F": true,
   "Ctrl+A": true,
   "Ctrl+E": true,
+  "Ctrl+F": true,
+  "Ctrl+B": true,
   "Ctrl+W": true,
   "Ctrl+U": true,
   "Ctrl+K": true,
@@ -30,6 +32,7 @@ export const DEFAULT_KEYBINDINGS: Readonly<Record<TKeybinding, boolean>> = {
   "Alt+Backspace": true,
   "Ctrl+Z": true,
   "Ctrl+Y": true,
+  "Alt+Y": true,
 };
 
 export const NAV_KEYBINDINGS: readonly TKeybinding[] = [
@@ -41,4 +44,6 @@ export const NAV_KEYBINDINGS: readonly TKeybinding[] = [
   "Alt+F",
   "Ctrl+A",
   "Ctrl+E",
+  "Ctrl+F",
+  "Ctrl+B",
 ];

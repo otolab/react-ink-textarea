@@ -847,4 +847,69 @@ describe("TextArea > keybindings flag map", () => {
     await wait();
     expect(onCursorChange).not.toHaveBeenCalled();
   });
+
+  describe("Emacs kill ring", () => {
+    const wait = (ms = 60) => new Promise((r) => setTimeout(r, ms));
+
+    it("Ctrl+F moves cursor forward by one grapheme", async () => {
+      const onCursorChange = vi.fn();
+      const { stdin } = render(
+        <TextArea
+          focus
+          onSubmit={() => {}}
+          value="abc"
+          cursorPosition={[0, 0]}
+          onChange={() => {}}
+          onCursorChange={onCursorChange}
+        />,
+      );
+      await wait();
+      onCursorChange.mockClear();
+      stdin.write("\x06"); // Ctrl+F
+      await wait();
+      const lastCall =
+        onCursorChange.mock.calls[onCursorChange.mock.calls.length - 1]?.[0];
+      expect(lastCall).toEqual([0, 1]);
+    });
+
+    it("Ctrl+B moves cursor backward by one grapheme", async () => {
+      const onCursorChange = vi.fn();
+      const { stdin } = render(
+        <TextArea
+          focus
+          onSubmit={() => {}}
+          value="abc"
+          cursorPosition={[0, 2]}
+          onChange={() => {}}
+          onCursorChange={onCursorChange}
+        />,
+      );
+      await wait();
+      onCursorChange.mockClear();
+      stdin.write("\x02"); // Ctrl+B
+      await wait();
+      const lastCall =
+        onCursorChange.mock.calls[onCursorChange.mock.calls.length - 1]?.[0];
+      expect(lastCall).toEqual([0, 1]);
+    });
+
+    it("Ctrl+K then Ctrl+Y yanks the killed text", async () => {
+      const onChange = vi.fn();
+      const { stdin } = render(
+        <TextArea focus onSubmit={() => {}} onChange={onChange} />,
+      );
+      await wait();
+      stdin.write("hello world");
+      await wait();
+      stdin.write("\x01"); // Ctrl+A
+      await wait();
+      stdin.write("\x0b"); // Ctrl+K
+      await wait();
+      onChange.mockClear();
+      stdin.write("\x19"); // Ctrl+Y
+      await wait();
+      expect(onChange).toHaveBeenLastCalledWith("hello world");
+    });
+
+  });
 });
