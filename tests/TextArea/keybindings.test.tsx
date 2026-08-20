@@ -847,4 +847,111 @@ describe("TextArea > keybindings flag map", () => {
     await wait();
     expect(onCursorChange).not.toHaveBeenCalled();
   });
+
+  describe("Emacs kill ring", () => {
+    const wait = (ms = 60) => new Promise((r) => setTimeout(r, ms));
+
+    it("Ctrl+F moves cursor forward by one grapheme", async () => {
+      const onCursorChange = vi.fn();
+      const { stdin } = render(
+        <TextArea
+          focus
+          onSubmit={() => {}}
+          value="abc"
+          cursorPosition={[0, 0]}
+          onChange={() => {}}
+          onCursorChange={onCursorChange}
+        />,
+      );
+      await wait();
+      onCursorChange.mockClear();
+      stdin.write("\x06"); // Ctrl+F
+      await wait();
+      const lastCall =
+        onCursorChange.mock.calls[onCursorChange.mock.calls.length - 1]?.[0];
+      expect(lastCall).toEqual([0, 1]);
+    });
+
+    it("Ctrl+B moves cursor backward by one grapheme", async () => {
+      const onCursorChange = vi.fn();
+      const { stdin } = render(
+        <TextArea
+          focus
+          onSubmit={() => {}}
+          value="abc"
+          cursorPosition={[0, 2]}
+          onChange={() => {}}
+          onCursorChange={onCursorChange}
+        />,
+      );
+      await wait();
+      onCursorChange.mockClear();
+      stdin.write("\x02"); // Ctrl+B
+      await wait();
+      const lastCall =
+        onCursorChange.mock.calls[onCursorChange.mock.calls.length - 1]?.[0];
+      expect(lastCall).toEqual([0, 1]);
+    });
+
+
+    it("Ctrl+Y: action override redo restores upstream redo behavior", async () => {
+      const { stdin, lastFrame } = render(
+        <TextArea
+          focus
+          onSubmit={() => {}}
+          undoGroupDelay={0}
+          keybindings={{ "Ctrl+Y": "redo" }}
+        />,
+      );
+      await wait();
+      stdin.write("a");
+      await wait();
+      stdin.write("b");
+      await wait();
+      stdin.write("\x1a");
+      await wait();
+      expect(lastFrame()).toContain("a");
+      expect(lastFrame()).not.toContain("ab");
+      stdin.write("\x19");
+      await wait();
+      expect(lastFrame()).toContain("ab");
+    });
+
+    it("Ctrl+Y: default fork action is yank after kill", async () => {
+      const onChange = vi.fn();
+      const { stdin } = render(
+        <TextArea focus onSubmit={() => {}} onChange={onChange} />,
+      );
+      await wait();
+      stdin.write("text");
+      await wait();
+      stdin.write("\x01");
+      await wait();
+      stdin.write("\x0b");
+      await wait();
+      onChange.mockClear();
+      stdin.write("\x19");
+      await wait();
+      expect(onChange).toHaveBeenLastCalledWith("text");
+    });
+
+    it("Ctrl+K then Ctrl+Y yanks the killed text", async () => {
+      const onChange = vi.fn();
+      const { stdin } = render(
+        <TextArea focus onSubmit={() => {}} onChange={onChange} />,
+      );
+      await wait();
+      stdin.write("hello world");
+      await wait();
+      stdin.write("\x01"); // Ctrl+A
+      await wait();
+      stdin.write("\x0b"); // Ctrl+K
+      await wait();
+      onChange.mockClear();
+      stdin.write("\x19"); // Ctrl+Y
+      await wait();
+      expect(onChange).toHaveBeenLastCalledWith("hello world");
+    });
+
+  });
 });

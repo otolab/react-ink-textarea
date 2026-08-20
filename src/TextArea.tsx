@@ -16,8 +16,6 @@ import {
   DEFAULT_AUTO_NEW_LINE_LIMIT,
   DEFAULT_INITIAL_LINE_COUNT,
   DEFAULT_TAB_WIDTH,
-  DEFAULT_KEYBINDINGS,
-  NAV_KEYBINDINGS,
 } from "./constants.js";
 import {
   getCursorLineAndColumn,
@@ -33,7 +31,9 @@ import { useCursorState } from "./hooks/useCursorState.js";
 import { useUndo } from "./hooks/useUndo.js";
 import { useCursorBlink } from "./hooks/useCursorBlink.js";
 import { useKeyboardInput } from "./hooks/useKeyboardInput.js";
+import { useKillRing } from "./hooks/useKillRing.js";
 import { useViewport } from "./hooks/useViewport.js";
+import { resolveKeyActions } from "./keybindings.js";
 import type {
   TextAreaProps,
   TextAreaHandle,
@@ -254,16 +254,10 @@ export const TextArea = ({
   labels,
   keybindings,
 }: TextAreaProps & { readonly ref?: Ref<TextAreaHandle> }): ReactNode => {
-  const resolvedKeybindings = useMemo<Readonly<Record<TKeybinding, boolean>>>(() => {
-    const merged: Record<TKeybinding, boolean> = {
-      ...DEFAULT_KEYBINDINGS,
-      ...(keybindings ?? {}),
-    };
-    if (disableArrowNavigation === true) {
-      for (const k of NAV_KEYBINDINGS) merged[k] = false;
-    }
-    return merged;
-  }, [keybindings, disableArrowNavigation]);
+  const resolvedKeyActions = useMemo(
+    () => resolveKeyActions(keybindings, undefined, disableArrowNavigation === true),
+    [keybindings, disableArrowNavigation],
+  );
   const resolvedStyles = useMemo(() => resolveStyles(styles), [styles]);
   const textProps = useMemo(
     () => styleToTextProps(resolvedStyles.text),
@@ -518,6 +512,15 @@ export const TextArea = ({
     undoGroupDelay,
   });
 
+  const {
+    pushKill,
+    yank,
+    yankPop,
+    getLastYankLength,
+    setLastYankLength,
+    resetYankState,
+  } = useKillRing();
+
   const { cursorVisible, resetBlink } = useCursorBlink({
     isActive,
     cursorInterval,
@@ -559,7 +562,7 @@ export const TextArea = ({
     isActive,
     value,
     cursor,
-    keybindings: resolvedKeybindings,
+    keyActions: resolvedKeyActions,
     autoNewLineLimit,
     onSubmit,
     onFirstLineUp,
@@ -572,6 +575,12 @@ export const TextArea = ({
     pushUndo,
     undo,
     redo,
+    pushKill,
+    yank,
+    yankPop,
+    getLastYankLength,
+    setLastYankLength,
+    resetYankState,
     resetMutationTracking,
     resetBlink,
     lineWidth: getChunkWidth(cursorLine, 0),

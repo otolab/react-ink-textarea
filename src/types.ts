@@ -63,6 +63,8 @@ export type TKeybinding =
   | "Alt+F"
   | "Ctrl+A"
   | "Ctrl+E"
+  | "Ctrl+F"
+  | "Ctrl+B"
   | "Ctrl+W"
   | "Ctrl+U"
   | "Ctrl+K"
@@ -70,9 +72,44 @@ export type TKeybinding =
   | "Delete"
   | "Alt+Backspace"
   | "Ctrl+Z"
-  | "Ctrl+Y";
+  | "Ctrl+Y"
+  | "Alt+Y";
 
-export type TKeybindings = Partial<Readonly<Record<TKeybinding, boolean>>>;
+/** Built-in editing actions bound to keyboard chords. */
+export type TKeyAction =
+  | "submit"
+  | "insertNewline"
+  | "cursorUp"
+  | "cursorDown"
+  | "cursorLeft"
+  | "cursorRight"
+  | "prevWord"
+  | "nextWord"
+  | "lineStart"
+  | "lineEnd"
+  | "cursorForwardChar"
+  | "cursorBackwardChar"
+  | "deletePrevWord"
+  | "killToLineStart"
+  | "killToLineEnd"
+  | "deletePrevGrapheme"
+  | "undo"
+  | "redo"
+  | "yank"
+  | "yankPop";
+
+/**
+ * Per-chord keybinding setting.
+ *
+ * - `true` (default when omitted): use the fork's default action for the chord
+ * - `false`: disable the chord
+ * - `TKeyAction`: run this action instead (upstream-style `"Ctrl+Y": "redo"`)
+ */
+export type TKeybindingSetting = boolean | TKeyAction;
+
+export type TKeybindings = Partial<
+  Readonly<Record<TKeybinding, TKeybindingSetting>>
+>;
 
 export type TextAreaHandle = {
   readonly insert: (text: string) => void;
