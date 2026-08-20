@@ -1,4 +1,4 @@
-import type { TKeybinding } from "./types.js";
+import type { TKeyAction, TKeybinding } from "./types.js";
 
 export const DEFAULT_CURSOR_INTERVAL = 500;
 export const DEFAULT_TYPING_PAUSE = 450;
@@ -8,6 +8,47 @@ export const DEFAULT_AUTO_NEW_LINE_LIMIT = 3;
 export const DEFAULT_INITIAL_LINE_COUNT = 2;
 export const DEFAULT_TAB_WIDTH = 4;
 
+/** Default chord → action map for this fork (Readline yank on `Ctrl+Y`). */
+export const DEFAULT_KEY_ACTIONS: Readonly<Record<TKeybinding, TKeyAction>> = {
+  Enter: "submit",
+  "Ctrl+J": "insertNewline",
+  "Ctrl+Enter": "insertNewline",
+  "Shift+Enter": "insertNewline",
+  "Alt+Enter": "insertNewline",
+  Up: "cursorUp",
+  Down: "cursorDown",
+  Left: "cursorLeft",
+  Right: "cursorRight",
+  "Alt+B": "prevWord",
+  "Alt+F": "nextWord",
+  "Ctrl+A": "lineStart",
+  "Ctrl+E": "lineEnd",
+  "Ctrl+F": "cursorForwardChar",
+  "Ctrl+B": "cursorBackwardChar",
+  "Ctrl+W": "deletePrevWord",
+  "Ctrl+U": "killToLineStart",
+  "Ctrl+K": "killToLineEnd",
+  Backspace: "deletePrevGrapheme",
+  Delete: "deletePrevGrapheme",
+  "Alt+Backspace": "deletePrevWord",
+  "Ctrl+Z": "undo",
+  "Ctrl+Y": "yank",
+  "Alt+Y": "yankPop",
+};
+
+/**
+ * Upstream `react-ink-textarea@0.4.x` defaults that differ from this fork.
+ * Pass as the `defaultKeyActions` argument to `resolveKeyActions`, or override
+ * individual chords (e.g. `keybindings={{ "Ctrl+Y": "redo" }}`).
+ */
+export const UPSTREAM_KEY_ACTIONS: Readonly<
+  Record<TKeybinding, TKeyAction>
+> = {
+  ...DEFAULT_KEY_ACTIONS,
+  "Ctrl+Y": "redo",
+};
+
+/** @deprecated Boolean toggles only; prefer `DEFAULT_KEY_ACTIONS` + `TKeybindings`. */
 export const DEFAULT_KEYBINDINGS: Readonly<Record<TKeybinding, boolean>> = {
   Enter: true,
   "Ctrl+J": true,

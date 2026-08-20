@@ -507,19 +507,27 @@ const Composer = () => {
 
 ### Keybinding Toggles
 
-Pass a `keybindings` map to disable individual chords. Keys are the chord strings themselves; values are `true` (enabled) or `false` (disabled). Anything you don't list defaults to enabled.
+Pass a `keybindings` map to disable individual chords or **replace the bound action**. Keys are chord strings (`TKeybinding`); values are:
+
+| Value | Effect |
+| ----- | ------ |
+| omitted / `true` | Fork default action for the chord |
+| `false` | Disable the chord (swallow input) |
+| `TKeyAction` | Run this built-in action instead |
 
 ```tsx
 <TextArea
   focus
   onSubmit={onSubmit}
   keybindings={{
-    "Ctrl+Z": false,      // disable undo
-    "Shift+Enter": false, // disable Shift+Enter newline (other newline chords still work)
-    "Alt+B": false,       // disable previous-word jump
+    "Ctrl+Z": false,       // disable undo
+    "Ctrl+Y": "redo",      // upstream-style redo instead of fork yank
+    "Shift+Enter": false,  // disable Shift+Enter newline
   }}
 />
 ```
+
+Fork defaults live in `DEFAULT_KEY_ACTIONS` (`Ctrl+Y` → `"yank"`). Upstream-compatible defaults (`Ctrl+Y` → `"redo"`) are exported as `UPSTREAM_KEY_ACTIONS` for helpers/tests — or override per chord as above.
 
 The full chord catalog (every key is a `TKeybinding`):
 
@@ -598,7 +606,7 @@ Things to know before shipping. Most are intrinsic to running a rich editor insi
 
 - **Time-grouped, not semantic.** Edits within `undoGroupDelay` (default 2.5 s) collapse into one step. On a slow machine the boundary may land mid-word.
 - **Bounded by `maxUndo`** (default 128). Older history is dropped silently.
-- **In this otolab fork, `Ctrl+Y` is yank (kill ring), not redo.** Upstream binds `Ctrl+Y` to redo; disable with `"Ctrl+Y": false` if you need to swallow the chord. There is no keyboard redo binding — `Ctrl+Shift+Z` is not bindable in terminals anyway.
+- **In this otolab fork, `Ctrl+Y` defaults to yank (kill ring), not redo.** Override with `keybindings={{ "Ctrl+Y": "redo" }}` for upstream behavior, or `"Ctrl+Y": false` to swallow the chord. There is no keyboard redo unless you bind `"redo"` to a chord.
 
 </details>
 

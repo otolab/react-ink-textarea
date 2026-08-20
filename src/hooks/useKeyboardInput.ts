@@ -13,13 +13,13 @@ import {
   visualRowForCursor,
 } from "../textUtils.js";
 import type { VisualRow } from "../textUtils.js";
-import type { TKeybinding } from "../types.js";
+import type { TKeyAction, TKeybinding } from "../types.js";
 
 type UseKeyboardInputOptions = {
   isActive: boolean;
   value: string;
   cursor: number;
-  keybindings: Readonly<Record<TKeybinding, boolean>>;
+  keyActions: Readonly<Record<TKeybinding, TKeyAction | null>>;
   autoNewLineLimit: number;
   onSubmit: (value: string) => void;
   onFirstLineUp: (() => void) | undefined;
@@ -34,6 +34,10 @@ type UseKeyboardInputOptions = {
   };
   pushUndo: (type: "insert" | "delete", value: string, cursor: number) => void;
   undo: (
+    value: string,
+    cursor: number,
+  ) => { value: string; cursor: number } | undefined;
+  redo: (
     value: string,
     cursor: number,
   ) => { value: string; cursor: number } | undefined;
@@ -53,7 +57,7 @@ export const useKeyboardInput = ({
   isActive,
   value,
   cursor,
-  keybindings,
+  keyActions,
   autoNewLineLimit,
   onSubmit,
   onFirstLineUp,
@@ -65,6 +69,7 @@ export const useKeyboardInput = ({
   setCursor,
   pushUndo,
   undo,
+  redo,
   pushKill,
   yank,
   yankPop,
@@ -93,6 +98,280 @@ export const useKeyboardInput = ({
 
   useInput(
     (input, key) => {
+      const killToLineStart = (): void => {
+        resetBlink();
+        const lineStart = findLineStart(value, cursor);
+        if (lineStart === cursor) {
+          if (cursor === 0) return;
+          const killed = value[cursor - 1] ?? "";
+          if (killed) pushKill(killed);
+          pushUndo("delete", value, cursor);
+          const target = cursor - 1;
+          const newValue = value.slice(0, target) + value.slice(cursor);
+          setValue(newValue);
+          setCursor(target, newValue);
+          resetMutationTracking();
+          return;
+        }
+        const killed = value.slice(lineStart, cursor);
+        if (killed) pushKill(killed);
+        pushUndo("delete", value, cursor);
+        const newValue = value.slice(0, lineStart) + value.slice(cursor);
+        setValue(newValue);
+        setCursor(lineStart, newValue);
+        resetMutationTracking();
+      };
+
+      const runAction = (action: TKeyAction): void => {
+        switch (action) {
+          case "insertNewline": {
+            resetBlink();
+            pushUndo("insert", value, cursor);
+            const newValue =
+              value.slice(0, cursor) + "\n" + value.slice(cursor);
+            setValue(newValue);
+            setCursor(cursor + 1, newValue);
+            return;
+          }
+          case "submit":
+            onSubmit(value);
+            return;
+          case "cursorUp": {
+            const { line, column } = getCursorLineAndColumn(value, cursor);
+            if (lineWidth > 0) {
+              const idx = visualRowForCursor(
+                visualRows,
+                line,
+                column,
+                lineWidth,
+              );
+              if (idx <= 0) {
+                if (onFirstLineUp) onFirstLineUp();
+                return;
+              }
+              resetBlink();
+              setCursor((c) =>
+                computeVisualUpCursor(value, c, lineWidth, visualRows),
+              );
+            } else {
+              if (line === 0) {
+                if (onFirstLineUp) onFirstLineUp();
+                return;
+              }
+              resetBlink();
+              setCursor((c) => {
+                const { line: currentLine, column: col } =
+                  getCursorLineAndColumn(value, c);
+                if (currentLine === 0) return findLineStart(value, c);
+                const prevLineEnd = findLineStart(value, c) - 1;
+                const prevLineStart = findLineStart(value, prevLineEnd);
+                const prevLineLength = prevLineEnd - prevLineStart;
+                return prevLineStart + Math.min(col, prevLineLength);
+              });
+            }
+            return;
+          }
+          case "cursorDown": {
+            resetBlink();
+            if (lineWidth > 0) {
+              const newPos = computeVisualDownCursor(
+                value,
+                cursor,
+                lineWidth,
+                visualRows,
+              );
+              if (newPos !== null) {
+                setCursor(newPos);
+              } else {
+                const trailingEmpty = countTrailingEmptyLines(value);
+                if (trailingEmpty >= autoNewLineLimit) {
+                  if (onLastLineDown) {
+                    onLastLineDown();
+                    return;
+                  }
+                  setCursor(value.length);
+                  return;
+                }
+                pushUndo("insert", value, cursor);
+                const newValue = value + "\n";
+                setValue(newValue);
+                setCursor(newValue.length, newValue);
+              }
+            } else {
+              const currentLineEnd = findLineEnd(value, cursor);
+              const isOnLastLine = currentLineEnd >= value.length;
+              if (isOnLastLine) {
+                const trailingEmpty = countTrailingEmptyLines(value);
+                if (trailingEmpty >= autoNewLineLimit) {
+                  if (onLastLineDown) {
+                    onLastLineDown();
+                    return;
+                  }
+                  setCursor(value.length);
+                  return;
+                }
+                pushUndo("insert", value, cursor);
+                const newValue = value + "\n";
+                setValue(newValue);
+                setCursor(newValue.length, newValue);
+              } else {
+                setCursor((c) => {
+                  const { column } = getCursorLineAndColumn(value, c);
+                  const nextLineStart = currentLineEnd + 1;
+                  const nextLineEnd = findLineEnd(value, nextLineStart);
+                  const nextLineLength = nextLineEnd - nextLineStart;
+                  return nextLineStart + Math.min(column, nextLineLength);
+                });
+              }
+            }
+            return;
+          }
+          case "cursorLeft":
+            if (cursor === 0) {
+              if (onFirstCharacterLeft) onFirstCharacterLeft();
+              return;
+            }
+            resetBlink();
+            setCursor((c) => prevGraphemeOffset(value, c));
+            return;
+          case "cursorRight":
+            if (cursor === value.length) {
+              if (onLastCharacterRight) onLastCharacterRight();
+              return;
+            }
+            resetBlink();
+            setCursor((c) => nextGraphemeOffset(value, c));
+            return;
+          case "prevWord":
+            resetBlink();
+            setCursor((c) => findPrevWordBoundary(value, c));
+            return;
+          case "nextWord":
+            resetBlink();
+            setCursor((c) => findNextWordBoundary(value, c));
+            return;
+          case "lineStart":
+            resetBlink();
+            setCursor((c) => findLineStart(value, c));
+            return;
+          case "lineEnd":
+            resetBlink();
+            setCursor((c) => findLineEnd(value, c));
+            return;
+          case "cursorForwardChar":
+            if (cursor === value.length) {
+              if (onLastCharacterRight) onLastCharacterRight();
+              return;
+            }
+            resetBlink();
+            setCursor((c) => nextGraphemeOffset(value, c));
+            return;
+          case "cursorBackwardChar":
+            if (cursor === 0) {
+              if (onFirstCharacterLeft) onFirstCharacterLeft();
+              return;
+            }
+            resetBlink();
+            setCursor((c) => prevGraphemeOffset(value, c));
+            return;
+          case "deletePrevWord": {
+            resetBlink();
+            const boundary = findPrevWordBoundary(value, cursor);
+            const killed = value.slice(boundary, cursor);
+            if (killed) pushKill(killed);
+            pushUndo("delete", value, cursor);
+            const newValue = value.slice(0, boundary) + value.slice(cursor);
+            setValue(newValue);
+            setCursor(boundary, newValue);
+            resetMutationTracking();
+            return;
+          }
+          case "killToLineStart":
+            killToLineStart();
+            return;
+          case "killToLineEnd": {
+            resetBlink();
+            const lineEnd = findLineEnd(value, cursor);
+            const killEnd = value[lineEnd] === "\n" ? lineEnd + 1 : lineEnd;
+            const killed = value.slice(cursor, killEnd);
+            if (killed) pushKill(killed, true);
+            pushUndo("delete", value, cursor);
+            const newValue = value.slice(0, cursor) + value.slice(killEnd);
+            setValue(newValue);
+            setCursor(cursor, newValue);
+            resetMutationTracking();
+            return;
+          }
+          case "deletePrevGrapheme":
+            if (cursor > 0) {
+              resetBlink();
+              pushUndo("delete", value, cursor);
+              const target = prevGraphemeOffset(value, cursor);
+              const newValue = value.slice(0, target) + value.slice(cursor);
+              setValue(newValue);
+              setCursor(target, newValue);
+            }
+            return;
+          case "undo": {
+            resetBlink();
+            const entry = undo(value, cursor);
+            if (entry) {
+              setValue(entry.value);
+              setCursor(entry.cursor);
+            }
+            resetMutationTracking();
+            return;
+          }
+          case "redo": {
+            resetBlink();
+            const entry = redo(value, cursor);
+            if (entry) {
+              setValue(entry.value);
+              setCursor(entry.cursor);
+            }
+            resetMutationTracking();
+            return;
+          }
+          case "yank": {
+            const text = yank();
+            if (!text) return;
+            resetBlink();
+            pushUndo("insert", value, cursor);
+            const newValue = value.slice(0, cursor) + text + value.slice(cursor);
+            setValue(newValue);
+            setCursor(cursor + text.length, newValue);
+            setLastYankLength(text.length);
+            resetMutationTracking();
+            return;
+          }
+          case "yankPop": {
+            const lastYankLength = getLastYankLength();
+            const text = yankPop();
+            if (!text) return;
+            resetBlink();
+            const deleteStart = Math.max(0, cursor - lastYankLength);
+            pushUndo("insert", value, deleteStart);
+            const newValue =
+              value.slice(0, deleteStart) + text + value.slice(cursor);
+            setValue(newValue);
+            setCursor(deleteStart + text.length, newValue);
+            setLastYankLength(text.length);
+            resetMutationTracking();
+            return;
+          }
+        }
+      };
+
+      const dispatchChord = (chord: TKeybinding): void => {
+        const action = keyActions[chord];
+        if (action === null) return;
+        runAction(action);
+      };
+
+      const handleChord = (chord: TKeybinding): void => {
+        dispatchChord(chord);
+      };
+
       const isCtrlJ = key.ctrl && input === "j";
       const isCtrlEnter =
         (key.return && key.ctrl) ||
@@ -118,307 +397,106 @@ export const useKeyboardInput = ({
               : null;
 
       if (newlineChord) {
-        if (!keybindings[newlineChord]) return;
-        resetBlink();
-        pushUndo("insert", value, cursor);
-        const newValue = value.slice(0, cursor) + "\n" + value.slice(cursor);
-        setValue(newValue);
-        setCursor(cursor + 1, newValue);
+        handleChord(newlineChord);
         return;
       }
 
       if (key.return) {
-        if (!keybindings.Enter) return;
-        onSubmit(value);
+        handleChord("Enter");
         return;
       }
 
       if (key.upArrow) {
-        if (!keybindings.Up) return;
-        const { line, column } = getCursorLineAndColumn(value, cursor);
-
-        if (lineWidth > 0) {
-          const idx = visualRowForCursor(visualRows, line, column, lineWidth);
-          if (idx <= 0) {
-            if (onFirstLineUp) onFirstLineUp();
-            return;
-          }
-          resetBlink();
-          setCursor((c) => computeVisualUpCursor(value, c, lineWidth, visualRows));
-        } else {
-          if (line === 0) {
-            if (onFirstLineUp) onFirstLineUp();
-            return;
-          }
-          resetBlink();
-          setCursor((c) => {
-            const { line: currentLine, column: col } = getCursorLineAndColumn(value, c);
-            if (currentLine === 0) return findLineStart(value, c);
-            const prevLineEnd = findLineStart(value, c) - 1;
-            const prevLineStart = findLineStart(value, prevLineEnd);
-            const prevLineLength = prevLineEnd - prevLineStart;
-            return prevLineStart + Math.min(col, prevLineLength);
-          });
-        }
+        handleChord("Up");
         return;
       }
 
       if (key.downArrow) {
-        if (!keybindings.Down) return;
-        resetBlink();
-
-        if (lineWidth > 0) {
-          const newPos = computeVisualDownCursor(value, cursor, lineWidth, visualRows);
-          if (newPos !== null) {
-            setCursor(newPos);
-          } else {
-            const trailingEmpty = countTrailingEmptyLines(value);
-            if (trailingEmpty >= autoNewLineLimit) {
-              if (onLastLineDown) { onLastLineDown(); return; }
-              setCursor(value.length);
-              return;
-            }
-            pushUndo("insert", value, cursor);
-            const newValue = value + "\n";
-            setValue(newValue);
-            setCursor(newValue.length, newValue);
-          }
-        } else {
-          const currentLineEnd = findLineEnd(value, cursor);
-          const isOnLastLine = currentLineEnd >= value.length;
-          if (isOnLastLine) {
-            const trailingEmpty = countTrailingEmptyLines(value);
-            if (trailingEmpty >= autoNewLineLimit) {
-              if (onLastLineDown) { onLastLineDown(); return; }
-              setCursor(value.length);
-              return;
-            }
-            pushUndo("insert", value, cursor);
-            const newValue = value + "\n";
-            setValue(newValue);
-            setCursor(newValue.length, newValue);
-          } else {
-            setCursor((c) => {
-              const { column } = getCursorLineAndColumn(value, c);
-              const nextLineStart = currentLineEnd + 1;
-              const nextLineEnd = findLineEnd(value, nextLineStart);
-              const nextLineLength = nextLineEnd - nextLineStart;
-              return nextLineStart + Math.min(column, nextLineLength);
-            });
-          }
-        }
+        handleChord("Down");
         return;
       }
 
       if (key.leftArrow) {
-        if (!keybindings.Left) return;
-        if (cursor === 0) {
-          if (onFirstCharacterLeft) onFirstCharacterLeft();
-          return;
-        }
-        resetBlink();
-        setCursor((c) => prevGraphemeOffset(value, c));
+        handleChord("Left");
         return;
       }
 
       if (key.rightArrow) {
-        if (!keybindings.Right) return;
-        if (cursor === value.length) {
-          if (onLastCharacterRight) onLastCharacterRight();
-          return;
-        }
-        resetBlink();
-        setCursor((c) => nextGraphemeOffset(value, c));
+        handleChord("Right");
         return;
       }
 
       if (key.meta && input === "b") {
-        if (!keybindings["Alt+B"]) return;
-        resetBlink();
-        setCursor((c) => findPrevWordBoundary(value, c));
+        handleChord("Alt+B");
         return;
       }
 
       if (key.meta && input === "f") {
-        if (!keybindings["Alt+F"]) return;
-        resetBlink();
-        setCursor((c) => findNextWordBoundary(value, c));
+        handleChord("Alt+F");
         return;
       }
 
       if (key.ctrl && input === "a") {
-        if (!keybindings["Ctrl+A"]) return;
-        resetBlink();
-        setCursor((c) => findLineStart(value, c));
+        handleChord("Ctrl+A");
         return;
       }
 
       if (key.ctrl && input === "e") {
-        if (!keybindings["Ctrl+E"]) return;
-        resetBlink();
-        setCursor((c) => findLineEnd(value, c));
+        handleChord("Ctrl+E");
         return;
       }
 
       if (key.ctrl && input === "f") {
-        if (!keybindings["Ctrl+F"]) return;
-        if (cursor === value.length) {
-          if (onLastCharacterRight) onLastCharacterRight();
-          return;
-        }
-        resetBlink();
-        setCursor((c) => nextGraphemeOffset(value, c));
+        handleChord("Ctrl+F");
         return;
       }
 
       if (key.ctrl && input === "b") {
-        if (!keybindings["Ctrl+B"]) return;
-        if (cursor === 0) {
-          if (onFirstCharacterLeft) onFirstCharacterLeft();
-          return;
-        }
-        resetBlink();
-        setCursor((c) => prevGraphemeOffset(value, c));
+        handleChord("Ctrl+B");
         return;
       }
 
       if (key.ctrl && input === "w") {
-        if (!keybindings["Ctrl+W"]) return;
-        resetBlink();
-        const boundary = findPrevWordBoundary(value, cursor);
-        const killed = value.slice(boundary, cursor);
-        if (killed) pushKill(killed);
-        pushUndo("delete", value, cursor);
-        const newValue = value.slice(0, boundary) + value.slice(cursor);
-        setValue(newValue);
-        setCursor(boundary, newValue);
-        resetMutationTracking();
+        handleChord("Ctrl+W");
         return;
       }
 
-      // Delete from the cursor back to the start of the current line. At the
-      // very start of the buffer this is a no-op — it must NOT fire a boundary
-      // navigation callback (those belong to the arrow keys only). Shared by
-      // Ctrl+U and Cmd+Backspace (super+Backspace).
-      const killToLineStart = () => {
-        resetBlink();
-        const lineStart = findLineStart(value, cursor);
-        if (lineStart === cursor) {
-          if (cursor === 0) return;
-          const killed = value[cursor - 1] ?? "";
-          if (killed) pushKill(killed);
-          pushUndo("delete", value, cursor);
-          const target = cursor - 1;
-          const newValue = value.slice(0, target) + value.slice(cursor);
-          setValue(newValue);
-          setCursor(target, newValue);
-          resetMutationTracking();
-          return;
-        }
-        const killed = value.slice(lineStart, cursor);
-        if (killed) pushKill(killed);
-        pushUndo("delete", value, cursor);
-        const newValue = value.slice(0, lineStart) + value.slice(cursor);
-        setValue(newValue);
-        setCursor(lineStart, newValue);
-        resetMutationTracking();
-      };
-
       if (key.ctrl && input === "u") {
-        if (!keybindings["Ctrl+U"]) return;
-        killToLineStart();
+        handleChord("Ctrl+U");
         return;
       }
 
       if (key.ctrl && input === "k") {
-        if (!keybindings["Ctrl+K"]) return;
-        resetBlink();
-        const lineEnd = findLineEnd(value, cursor);
-        const killEnd = value[lineEnd] === "\n" ? lineEnd + 1 : lineEnd;
-        const killed = value.slice(cursor, killEnd);
-        if (killed) pushKill(killed, true);
-        pushUndo("delete", value, cursor);
-        const newValue = value.slice(0, cursor) + value.slice(killEnd);
-        setValue(newValue);
-        setCursor(cursor, newValue);
-        resetMutationTracking();
+        handleChord("Ctrl+K");
         return;
       }
 
       if (key.backspace || key.delete) {
-        // Cmd+Backspace in terminals that report the super modifier (kitty
-        // protocol). macOS convention is delete-to-line-start, same as Ctrl+U.
         if (key.super && key.backspace) {
-          if (!keybindings["Ctrl+U"]) return;
-          killToLineStart();
+          dispatchChord("Ctrl+U");
           return;
         }
         if (key.meta) {
-          if (!keybindings["Alt+Backspace"]) return;
-          resetBlink();
-          const boundary = findPrevWordBoundary(value, cursor);
-          const killed = value.slice(boundary, cursor);
-          if (killed) pushKill(killed);
-          pushUndo("delete", value, cursor);
-          const newValue = value.slice(0, boundary) + value.slice(cursor);
-          setValue(newValue);
-          setCursor(boundary, newValue);
-          resetMutationTracking();
+          handleChord("Alt+Backspace");
           return;
         }
         const chord: TKeybinding = key.backspace ? "Backspace" : "Delete";
-        if (!keybindings[chord]) return;
-        if (cursor > 0) {
-          resetBlink();
-          pushUndo("delete", value, cursor);
-          const target = prevGraphemeOffset(value, cursor);
-          const newValue = value.slice(0, target) + value.slice(cursor);
-          setValue(newValue);
-          setCursor(target, newValue);
-        }
+        handleChord(chord);
         return;
       }
 
       if (key.ctrl && input === "z") {
-        if (!keybindings["Ctrl+Z"]) return;
-        resetBlink();
-        const entry = undo(value, cursor);
-        if (entry) {
-          setValue(entry.value);
-          setCursor(entry.cursor);
-        }
-        resetMutationTracking();
+        handleChord("Ctrl+Z");
         return;
       }
 
       if (key.ctrl && input === "y") {
-        if (!keybindings["Ctrl+Y"]) return;
-        const text = yank();
-        if (!text) return;
-        resetBlink();
-        pushUndo("insert", value, cursor);
-        const newValue = value.slice(0, cursor) + text + value.slice(cursor);
-        setValue(newValue);
-        setCursor(cursor + text.length, newValue);
-        setLastYankLength(text.length);
-        resetMutationTracking();
+        handleChord("Ctrl+Y");
         return;
       }
 
       if (key.meta && input === "y") {
-        if (!keybindings["Alt+Y"]) return;
-        const lastYankLength = getLastYankLength();
-        const text = yankPop();
-        if (!text) return;
-        resetBlink();
-        const deleteStart = Math.max(0, cursor - lastYankLength);
-        pushUndo("insert", value, deleteStart);
-        const newValue =
-          value.slice(0, deleteStart) + text + value.slice(cursor);
-        setValue(newValue);
-        setCursor(deleteStart + text.length, newValue);
-        setLastYankLength(text.length);
-        resetMutationTracking();
+        handleChord("Alt+Y");
         return;
       }
 
