@@ -23,6 +23,9 @@ describe("resolveKeyActions", () => {
     expect(actions["Ctrl+Y"]).toBe("yank");
     expect(actions["Alt+Y"]).toBe("yankPop");
     expect(actions["Ctrl+F"]).toBe("cursorForwardChar");
+    expect(actions["Ctrl+D"]).toBe("deleteNextGrapheme");
+    expect(actions["Ctrl+P"]).toBe("cursorUpVisualRow");
+    expect(actions["Ctrl+N"]).toBe("cursorDownVisualRow");
   });
 
   it("supports per-chord action override", () => {

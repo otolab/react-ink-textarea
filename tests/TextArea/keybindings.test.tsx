@@ -893,6 +893,63 @@ describe("TextArea > keybindings flag map", () => {
       expect(lastCall).toEqual([0, 1]);
     });
 
+    it("Ctrl+D deletes the next grapheme", async () => {
+      const onChange = vi.fn();
+      const { stdin } = render(
+        <TextArea focus onSubmit={() => {}} onChange={onChange} />,
+      );
+      await wait();
+      stdin.write("abc");
+      await wait();
+      stdin.write("\x01"); // Ctrl+A
+      await wait();
+      onChange.mockClear();
+      stdin.write("\x04"); // Ctrl+D
+      await wait();
+      expect(onChange).toHaveBeenLastCalledWith("bc");
+    });
+
+    it("Ctrl+P and Ctrl+N move across visual rows without inserting a line", async () => {
+      const onCursorChange = vi.fn();
+      const up = render(
+        <TextArea
+          focus
+          onSubmit={() => {}}
+          value={"one\ntwo\nsix"}
+          cursorPosition={[1, 3]}
+          onChange={() => {}}
+          onCursorChange={onCursorChange}
+        />,
+      );
+      await wait();
+      onCursorChange.mockClear();
+
+      up.stdin.write("\x10"); // Ctrl+P
+      await wait();
+      expect(
+        onCursorChange.mock.calls[onCursorChange.mock.calls.length - 1]?.[0],
+      ).toEqual([0, 3]);
+
+      up.unmount();
+      onCursorChange.mockClear();
+      const down = render(
+        <TextArea
+          focus
+          onSubmit={() => {}}
+          value={"one\ntwo\nsix"}
+          cursorPosition={[0, 3]}
+          onChange={() => {}}
+          onCursorChange={onCursorChange}
+        />,
+      );
+      await wait();
+      down.stdin.write("\x0e"); // Ctrl+N
+      await wait();
+      expect(
+        onCursorChange.mock.calls[onCursorChange.mock.calls.length - 1]?.[0],
+      ).toEqual([1, 3]);
+    });
+
 
     it("Ctrl+Y: action override redo restores upstream redo behavior", async () => {
       const { stdin, lastFrame } = render(

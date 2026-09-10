@@ -492,6 +492,9 @@ const Composer = () => {
 | `Ctrl+E`        | End of current line            |
 | `Ctrl+F`        | Forward one character          |
 | `Ctrl+B`        | Backward one character         |
+| `Ctrl+D`        | Delete character after cursor  |
+| `Ctrl+P`        | Move cursor up by visual row   |
+| `Ctrl+N`        | Move cursor down by visual row |
 | `Ctrl+W`        | Delete word before cursor (pushes to kill ring) |
 | `Ctrl+U`        | Delete to start of line. At column 0, joins with previous line (matches Cmd+Backspace mapping in iTerm2/ghostty). |
 | `Ctrl+K`        | Delete to end of line (pushes to kill ring) |
@@ -548,6 +551,9 @@ The full chord catalog (every key is a `TKeybinding`):
 | `Ctrl+E`         | End of line                       |
 | `Ctrl+F`         | Forward one character             |
 | `Ctrl+B`         | Backward one character            |
+| `Ctrl+D`         | Delete grapheme after cursor     |
+| `Ctrl+P`         | Cursor up by visual row          |
+| `Ctrl+N`         | Cursor down by visual row        |
 | `Ctrl+W`         | Delete word before cursor         |
 | `Ctrl+U`         | Delete to start of line           |
 | `Ctrl+K`         | Delete to end of line             |
@@ -558,7 +564,7 @@ The full chord catalog (every key is a `TKeybinding`):
 | `Ctrl+Y`         | Yank (kill ring)                  |
 | `Alt+Y`          | Yank-pop                          |
 
-`disableArrowNavigation: true` additionally forces all nav chords (`Up`, `Down`, `Left`, `Right`, `Alt+B`, `Alt+F`, `Ctrl+A`, `Ctrl+E`, `Ctrl+F`, `Ctrl+B`) off regardless of the map.
+`disableArrowNavigation: true` additionally forces all nav chords (`Up`, `Down`, `Left`, `Right`, `Alt+B`, `Alt+F`, `Ctrl+A`, `Ctrl+E`, `Ctrl+F`, `Ctrl+B`, `Ctrl+P`, `Ctrl+N`) off regardless of the map.
 
 ## Caveats & limitations
 

@@ -274,6 +274,39 @@ export const useKeyboardInput = ({
             resetBlink();
             setCursor((c) => prevGraphemeOffset(value, c));
             return;
+          case "cursorUpVisualRow": {
+            const effectiveLineWidth =
+              lineWidth > 0 ? lineWidth : Number.MAX_SAFE_INTEGER;
+            if (lineWidth > 0 && visualRows.length > 0) {
+              const { line, column } = getCursorLineAndColumn(value, cursor);
+              if (
+                visualRowForCursor(visualRows, line, column, lineWidth) <= 0
+              ) {
+                return;
+              }
+            } else if (getCursorLineAndColumn(value, cursor).line === 0) {
+              return;
+            }
+            resetBlink();
+            setCursor((c) =>
+              computeVisualUpCursor(value, c, effectiveLineWidth, visualRows),
+            );
+            return;
+          }
+          case "cursorDownVisualRow": {
+            const effectiveLineWidth =
+              lineWidth > 0 ? lineWidth : Number.MAX_SAFE_INTEGER;
+            const newPos = computeVisualDownCursor(
+              value,
+              cursor,
+              effectiveLineWidth,
+              visualRows,
+            );
+            if (newPos === null) return;
+            resetBlink();
+            setCursor(newPos);
+            return;
+          }
           case "deletePrevWord": {
             resetBlink();
             const boundary = findPrevWordBoundary(value, cursor);
@@ -310,6 +343,17 @@ export const useKeyboardInput = ({
               const newValue = value.slice(0, target) + value.slice(cursor);
               setValue(newValue);
               setCursor(target, newValue);
+            }
+            return;
+          case "deleteNextGrapheme":
+            if (cursor < value.length) {
+              resetBlink();
+              pushUndo("delete", value, cursor);
+              const target = nextGraphemeOffset(value, cursor);
+              const newValue = value.slice(0, cursor) + value.slice(target);
+              setValue(newValue);
+              setCursor(cursor, newValue);
+              resetMutationTracking();
             }
             return;
           case "undo": {
@@ -453,6 +497,21 @@ export const useKeyboardInput = ({
 
       if (key.ctrl && input === "b") {
         handleChord("Ctrl+B");
+        return;
+      }
+
+      if (key.ctrl && input === "d") {
+        handleChord("Ctrl+D");
+        return;
+      }
+
+      if (key.ctrl && input === "p") {
+        handleChord("Ctrl+P");
+        return;
+      }
+
+      if (key.ctrl && input === "n") {
+        handleChord("Ctrl+N");
         return;
       }
 

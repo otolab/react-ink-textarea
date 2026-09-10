@@ -1,6 +1,6 @@
 {
   "name": "@otolab/react-ink-textarea",
-  "version": "0.4.1-otolab.2",
+  "version": "0.4.1-otolab.3",
   "description": "A multiline textarea component for Ink (otolab fork: IME cursor + Emacs kill ring)",
   "type": "module",
   "sideEffects": false,
